@@ -105,6 +105,9 @@ mod x86 {
 		"}
 	}
 
+	// This encodes the same as an immediate. A separate function purely for distinction.
+	pub use i as d;
+
 	pub fn o(inst: &'static str, op: u8, rdst: Size) -> String {
 		indoc::formatdoc! {"
 			#[inline]
@@ -128,6 +131,7 @@ mod x86 {
 
 			zo("nop", 0x90),
 			zo("ret", 0xC3),
+			zo("leave", 0xC9),
 
 			i("push", 0x68, Size::U8),
 			i("push", 0x68, Size::U16),
@@ -147,7 +151,41 @@ mod x86 {
 			rm("add", 0x03, Size::U16, Size::U16),
 			rm("add", 0x03, Size::U32, Size::U32),
 			mi("add", 0x81, 0, Size::U16, Size::U16),
-			mi("add", 0x81, 0, Size::U32, Size::U32)
+			mi("add", 0x81, 0, Size::U32, Size::U32),
+
+			rm("sub", 0x2B, Size::U16, Size::U16),
+			rm("sub", 0x2B, Size::U32, Size::U32),
+			mi("sub", 0x81, 5, Size::U16, Size::U16),
+			mi("sub", 0x81, 5, Size::U32, Size::U32),
+
+			m("mul", 0xF6, 4, Size::U8),
+			m("mul", 0xF7, 4, Size::U16),
+			m("mul", 0xF7, 4, Size::U32),
+
+			m("div", 0xF6, 6, Size::U8),
+			m("div", 0xF7, 6, Size::U16),
+			m("div", 0xF7, 6, Size::U32),
+
+			rm("cmp", 0x3B, Size::U16, Size::U16),
+			rm("cmp", 0x3B, Size::U32, Size::U32),
+
+			mi("cmp", 0x80, 7, Size::U8, Size::U8),
+			mi("cmp", 0x81, 7, Size::U16, Size::U16),
+			mi("cmp", 0x81, 7, Size::U32, Size::U32),
+
+			d("callnrd", 0xE8, Size::U16),
+			d("callnrd", 0xE8, Size::U32),
+
+			m("callnai", 0xFF, 2, Size::U16),
+			m("callnai", 0xFF, 2, Size::U32),
+
+			rm("mov", 0x8A, Size::U8, Size::U8),
+			rm("mov", 0x8B, Size::U16, Size::U16),
+			rm("mov", 0x8B, Size::U32, Size::U32),
+
+			oi("mov", 0xB0, Size::U8, Size::U8),
+			oi("mov", 0xB8, Size::U16, Size::U16),
+			oi("mov", 0xB8, Size::U32, Size::U32),
 		].join("\n")
 	}
 }
@@ -238,6 +276,9 @@ mod amd64 {
 		"}
 	}
 
+	// This encodes the same as an immediate. A separate function purely for distinction.
+	pub use i as d;
+
 	pub fn o(inst: &str, prefixes: &[&str], op: u8, rdst: Size) -> String {
 		let total_bytes = prefixes.len() + 1;
 		let prefixes = prefixes.iter().map(|s| format!("{s}, ")).collect::<Vec<_>>().concat();
@@ -257,6 +298,14 @@ mod amd64 {
 			mi("add", &[COMPAT_16], 0x81, 0, Size::U16, Size::U16),
 			mi("add", &[REX_W], 0x81, 0, Size::U64, Size::U32),
 
+			rm("sub", &[COMPAT_16], 0x2B, Size::U16, Size::U16),
+			rm("sub", &[REX_W], 0x2B, Size::U64, Size::U64),
+			mi("sub", &[COMPAT_16], 0x81, 5, Size::U16, Size::U16),
+			mi("sub", &[REX_W], 0x81, 5, Size::U64, Size::U32),
+
+			m("mul", &[REX_W], 0xF7, 4, Size::U64),
+			m("div", &[REX_W], 0xF7, 6, Size::U64),
+
 			rm("mov", &[REX_W], 0x8B, Size::U64, Size::U64),
 			oi("mov", &[REX_W], 0xB8, Size::U64, Size::U64),
 
@@ -271,6 +320,11 @@ mod amd64 {
 
 			m("not", &[REX_W], 0xF7, 2, Size::U64),
 			m("neg", &[REX_W], 0xF7, 3, Size::U64),
+
+			rm("cmp", &[REX_W], 0x3B, Size::U64, Size::U64),
+			mi("cmp", &[REX_W], 0x81, 7, Size::U64, Size::U32),
+
+			m("callnai", &[REX_W], 0xFF, 2, Size::U64),
 		].join("\n")
 	}
 }

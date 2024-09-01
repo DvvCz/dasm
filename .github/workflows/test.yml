@@ -1,0 +1,11 @@
+name: Test
+on: [push, pull_request]
+
+jobs:
+  test:
+    name: Run tests on nightly
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@nightly
+      - run: cargo test --all-features

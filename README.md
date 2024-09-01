@@ -1,6 +1,6 @@
 # dasm
 
-This is a tiny assembler that currently supports x86 and amd64.
+This is a tiny, zero dependency assembler that currently supports x86 and amd64.
 
 Support for all instructions is **NOT** planned.
 Nor will there be any passes for optimization.
@@ -18,26 +18,24 @@ Despite how it sounds, it is pretty nice and easy to use on its own.
 
 **Example**
 
-```rs
-	let rax = 0;
-	let rcx = 1;
-	let rsp = 6; // Argument 2
-	let rbp = 7; // Argument 1
+```rust
+let rax = 0;
+let rsp = 6; // Argument 2
+let rbp = 7; // Argument 1
 
-	let asm = [
-		&tier::raw::amd64::nop() as &[u8],
-		&tier::raw::amd64::mov_r64_r64(rax, rbp),
-		&tier::raw::amd64::mov_r64_r64(rcx, rsp),
-		&tier::raw::amd64::add_r64_r64(rax, rcx),
-		&tier::raw::amd64::ret()
-	].concat();
+let asm = [
+	&dasm::tier::raw::amd64::mov_r64_r64(rax, rbp) as &[u8],
+	&dasm::tier::raw::amd64::add_r64_r64(rax, rsp),
+	&dasm::tier::raw::amd64::ret()
+].concat();
 
-	let mut memory = memmap2::MmapMut::map_anon(asm.len())?;
-	memory.copy_from_slice(&asm);
-	let memory = memory.make_exec()?;
+// A helper for making memory executable is included.
+let mmapped = dasm::mmap::Mmap::exec(&asm)
+	.expect("Failed to mmap");
 
-	let adder: extern "C" fn(x: u64, y: u64) -> u64 = unsafe { std::mem::transmute(memory.as_ptr()) };
-	println!("{}", adder(5, 200));
+// Simply cast the bytes to the function you just made.
+let adder: extern "C" fn(x: u64, y: u64) -> u64 = unsafe { std::mem::transmute(mmapped.as_ptr()) };
+assert_eq!(adder(5, 200), 205);
 ```
 
 ### Mid (not started)
