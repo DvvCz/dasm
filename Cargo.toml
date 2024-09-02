@@ -1,7 +1,13 @@
 [package]
 name = "dasm"
+authors = ["David Cruz <david@codebycruz.com>"]
+description = "A tiny, zero dependency assembler"
 version = "0.1.0"
 edition = "2021"
+keywords = ["assembler", "jit", "dasm", "x86", "codegen"]
+categories = ["os", "no-std", "no-std::no-alloc"]
+repository = "https://github.com/DvvCz/dasm"
+license = "GPL-3.0"
 
 [features]
 default = ["std", "mmap"]
