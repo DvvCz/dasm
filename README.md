@@ -1,6 +1,14 @@
-# dasm
+<h1 align="center"> dasm </h1>
 
-This is a tiny, zero dependency assembler that currently supports x86 and amd64.
+<p align="center">
+	A tiny, zero dependency assembler that currently supports x86 and amd64.
+</p>
+
+<div align="center">
+	<a href="https://github.com/DvvCz/dasm/actions">
+		<img alt="Test Status" src="https://github.com/DvvCz/dasm/actions/workflows/test.yml/badge.svg">
+	</a>
+</div>
 
 Support for all instructions is **NOT** planned.
 Nor will there be any passes for optimization.
