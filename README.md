@@ -10,6 +10,8 @@
 	</a>
 </div>
 
+## Note
+
 Support for all instructions is **NOT** planned.
 Nor will there be any passes for optimization.
 
@@ -17,7 +19,10 @@ This is simply meant for code generation by JIT compilers and such.
 
 ## How it works
 
-There are three tiers to this library,
+Code generation doesn't have to be hard. This just provides explicit functions for generating instructions.  
+No abstractions for the sake of safety or optimization which add complexity. If you just want to write assembly, this is for you.
+
+**There are three tiers to this library.**
 
 ### Low
 
