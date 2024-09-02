@@ -5,9 +5,9 @@
 </p>
 
 <div align="center">
-	<a href="https://github.com/DvvCz/dasm/actions">
-		<img alt="Test Status" src="https://github.com/DvvCz/dasm/actions/workflows/test.yml/badge.svg">
-	</a>
+	[<img alt="Crates.io Version" src="https://img.shields.io/crates/v/dasm?color=orange">](https://crates.io/crates/dasm)
+	[<img alt="Docs.rs Link" src="https://img.shields.io/docsrs/dasm?color=blue">](https://docs.rs/dasm/latest/dasm)
+	[<img alt="Test Status" src="https://img.shields.io/github/actions/workflow/status/DvvCz/dasm/test.yml?branch=master&label=tests">](https://github.com/DvvCz/dasm/actions)
 </div>
 
 ## Note
