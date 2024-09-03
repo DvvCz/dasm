@@ -22,19 +22,19 @@ Support for all instructions is **NOT** planned.
 Nor will there be any passes for optimization.
 
 This is simply meant for code generation by JIT compilers and such.  
-If you want a fully featured library, check out [Iced](https://github.com/icedland/iced)!
+If you want a fully featured library, check out [`Iced`](https://github.com/icedland/iced)!
 
 ## How it works
 
 Code generation doesn't have to be hard. This just provides explicit functions for generating instructions.  
 No abstractions for the sake of safety or optimization which add complexity. If you just want to write assembly, this is for you.
 
-**This library is tiered by your desired abstraction level.**
+**This library has tiered abstraction levels.**
 
 ### Raw
 
 This gives you access to the "raw" bytes from an instruction given untagged numeric arguments.
-Despite how it sounds, it is pretty nice and easy to use on its own.
+Despite how it sounds, it is pretty nice to use on its own.
 
 **Example**
 
@@ -66,10 +66,14 @@ At the moment, other tiers are not implemented as I plan out how these abstracti
 
 Hopefully they'd involve abstracting away overloads with tagged enums and cross architecture compatibility.
 
-## Why?
+## Why
 
-- LLVM is too big
-- Cranelift is 10x smaller than LLVM, but is very complex for the sake of safety.
-- LuaJIT's DynASM involves unnecessary syntax, and Rust is much easier to distribute.
+I felt the need for an assembler.
 
-I wanted a simple solution.
+LLVM was out of the question due to its size and difficult integration to Rust.
+
+I struggled to work with Cranelift due to its complexity for the sake of safety and performance.
+
+But sometimes, you don't care about safety or performance. You just want a simple solution to get it done.
+
+That's what `dasm` is supposed to be.
