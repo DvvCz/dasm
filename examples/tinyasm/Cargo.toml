@@ -1,0 +1,10 @@
+[package]
+name = "tinyasm"
+version = "0.1.0"
+authors = ["David Cruz <david@codebycruz.com>"]
+edition = "2021"
+publish = false
+
+[dependencies]
+atoi = "2.0.0"
+dasm = { path = "../.." }

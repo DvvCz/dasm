@@ -21,7 +21,8 @@
 Support for all instructions is **NOT** planned.
 Nor will there be any passes for optimization.
 
-This is simply meant for code generation by JIT compilers and such.
+This is simply meant for code generation by JIT compilers and such.  
+If you want a fully featured library, check out [Iced](https://github.com/icedland/iced)!
 
 ## How it works
 
@@ -56,6 +57,8 @@ let mmapped = dasm::mmap::Mmap::exec(&asm)
 let adder: extern "C" fn(x: u64, y: u64) -> u64 = unsafe { std::mem::transmute(mmapped.as_ptr()) };
 assert_eq!(adder(5, 200), 205);
 ```
+
+There's also an example showcasing a tiny AOT compiled programming language at [`examples/tinyasm`](https://github.com/DvvCz/dasm/tree/master/examples/tinyasm).
 
 ### Mid (not started)
 
