@@ -18,11 +18,11 @@
 
 ## Note
 
-Support for all instructions is **NOT** planned.
+Support for every single instruction is **NOT** planned.
 Nor will there be any passes for optimization.
 
-This is simply meant for code generation by JIT compilers and such.  
-If you want a fully featured library, check out [`Iced`](https://github.com/icedland/iced)!
+This has a simple goal of assembling instructions for compilers.
+If you want a fully featured library, please refer to [`Iced`](https://github.com/icedland/iced)
 
 ## How it works
 
@@ -58,7 +58,7 @@ let adder: extern "C" fn(x: u64, y: u64) -> u64 = unsafe { std::mem::transmute(m
 assert_eq!(adder(5, 200), 205);
 ```
 
-There's also an example showcasing a tiny AOT compiled programming language at [`examples/tinyasm`](https://github.com/DvvCz/dasm/tree/master/examples/tinyasm).
+There's also an example showcasing a tiny AOT compiled lisp at [`examples/tinylisp`](https://github.com/DvvCz/dasm/tree/master/examples/tinylisp).
 
 ## Other Tiers
 

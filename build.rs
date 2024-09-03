@@ -117,7 +117,7 @@ mod x86 {
 		"}
 	}
 
-	pub fn src() -> String {
+	pub fn src_amd64_compatible() -> String {
 		[
 			m("not", 0xF6, 2, Size::U8),
 			m("not", 0xF7, 2, Size::U16),
@@ -137,8 +137,8 @@ mod x86 {
 			i("push", 0x68, Size::U16),
 			i("push", 0x68, Size::U32),
 
+			o("push", 0x50, Size::U16),
 			o("pop", 0x58, Size::U16),
-			o("pop", 0x58, Size::U32),
 
 			i("int", 0xCD, Size::U8),
 			zo("int0", 0xCE),
@@ -187,6 +187,29 @@ mod x86 {
 			oi("mov", 0xB8, Size::U16, Size::U16),
 			oi("mov", 0xB8, Size::U32, Size::U32),
 		].join("\n")
+	}
+
+	pub fn src_x86_only() -> String {
+		[
+			o("push", 0x50, Size::U32),
+			o("pop", 0x58, Size::U32),
+		].join("\n")
+	}
+
+	pub fn src() -> String {
+		let amd64_compatible = src_amd64_compatible();
+		let x86_only = src_x86_only();
+
+		indoc::formatdoc! {"
+			pub(crate) mod compatible {{
+				pub(crate) use super::prelude::*;
+				{amd64_compatible}
+			}}
+
+			pub use compatible::*;
+
+			{x86_only}
+		"}
 	}
 }
 
@@ -325,6 +348,9 @@ mod amd64 {
 			mi("cmp", &[REX_W], 0x81, 7, Size::U64, Size::U32),
 
 			m("callnai", &[REX_W], 0xFF, 2, Size::U64),
+
+			o("push", &[], 0x50, Size::U64),
+			o("pop", &[], 0x58, Size::U64)
 		].join("\n")
 	}
 }

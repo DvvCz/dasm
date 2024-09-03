@@ -119,72 +119,109 @@ fn parse<'a>(toks: &'a [Token]) -> Vec<Node<'a>> {
 	out
 }
 
-fn assemble<'a>(nodes: Vec<Node<'a>>) -> extern "C" fn() -> u64 {
+fn assemble<'a>(nodes: &'a [Node<'a>]) -> extern "C" fn() -> u64 {
 	let mut out: Vec<u8> = vec![];
 	let mut ind = 0;
+
+	fn ident_to_register(i: &[u8]) -> u8 {
+		match i {
+			b"r0" => 0,
+			b"rax" => 0,
+			b"r1" => 1,
+			b"rcx" => 1,
+			b"r2" => 2,
+			b"rdx" => 2,
+			b"r3" => 3,
+			b"rbx" => 3,
+			b"r4" => 4,
+			b"rsi" => 4,
+			b"r5" => 5,
+			b"rdi" => 5,
+			b"r6" => 6,
+			b"rsp" => 6,
+			b"r7" => 7,
+			b"rbp" => 7,
+			whatever => panic!("Unknown register {}", core::str::from_utf8(whatever).unwrap())
+		}
+	}
 	
 	fn get_register<'a>(r: Option<&Node<'a>>) -> u8 {
 		match r {
-			Some(Node::Ident(i)) => {
-				match *i {
-					b"r0" => 0,
-					b"rax" => 0,
-					b"r1" => 1,
-					b"rcx" => 1,
-					b"r2" => 2,
-					b"rdx" => 2,
-					b"r3" => 3,
-					b"rbx" => 3,
-					b"r4" => 4,
-					b"rsi" => 4,
-					b"r5" => 5,
-					b"rdi" => 5,
-					b"r6" => 6,
-					b"rsp" => 6,
-					b"r7" => 7,
-					b"rbp" => 7,
-					whatever => panic!("Unknown register {}", core::str::from_utf8(whatever).unwrap())
-				}
-			},
+			Some(Node::Ident(i)) => ident_to_register(*i),
 			whatever => panic!("Expected ident, got {whatever:#?}")
 		}
 	}
 	
-	fn get_value<'a>(v: Option<&Node<'a>>) -> u64 {
+	enum Value {
+		Register(u8),
+		Imm(u64),
+		Stack,
+		Void
+	}
+
+	fn get_value<'a>(v: Option<&Node<'a>>, out: &mut Vec<u8>) -> Value {
 		match v {
-			Some(Node::Ident(_)) => todo!("variable set"),
-			Some(Node::Number(n)) => *n,
-			Some(_) => todo!("nested set"),
-			None => panic!("expected value to set to")
+			Some(Node::Ident(i)) => Value::Register(ident_to_register(*i)),
+			Some(Node::Number(n)) => Value::Imm(*n),
+			Some(node) => {
+				// expressions should pushed onto stack
+				assemble_exp(&node, out);
+				Value::Stack
+			},
+			None => panic!("Expected a value")
 		}
 	}
 
-	while ind < nodes.len() {
-		match &nodes[ind] {
+	fn assemble_exp<'a>(node: &'a Node<'a>, out: &mut Vec<u8>) -> Value {
+		match node {
 			Node::Call(name, args) => {
-				ind += 1;
-
 				match *name {
 					b"set" => {
-						assert!(args.len() == 2, "Should only pass two arguments to set");
-
 						let register = get_register(args.get(0));
-						let value = get_value(args.get(1));
+						let value = get_value(args.get(1), out);
 
-						out.extend(dasm::tier::raw::amd64::mov_r64_i64(register, value));
+						match value {
+							Value::Register(r) => out.extend(dasm::tier::raw::amd64::mov_r64_r64(register, r)),
+							Value::Imm(i) => out.extend(dasm::tier::raw::amd64::mov_r64_i64(register, i)),
+							Value::Stack => {
+								out.extend(dasm::tier::raw::amd64::pop_r64(0));
+								out.extend(dasm::tier::raw::amd64::mov_r64_r64(register, 0));
+							},
+							Value::Void => panic!("Expected value, got void")
+						}
+
+						Value::Void
 					},
 
 					b"add" => {
-						assert!(args.len() == 2, "Should only pass two arguments to set");
+						let lhs = get_value(args.get(0), out);
+						let rhs = get_value(args.get(1), out);
 
-						let dst = get_register(args.get(0));
-						let src = get_register(args.get(1));
+						match lhs {
+							Value::Register(r) => out.extend(dasm::tier::raw::amd64::push_r64(r)),
+							Value::Imm(i) => out.extend(dasm::tier::raw::amd64::push_i32(i as u32)),
+							Value::Stack => (),
+							Value::Void => panic!("Expected value, got void")
+						};
+						
+						match rhs {
+							Value::Register(r) => out.extend(dasm::tier::raw::amd64::push_r64(r)),
+							Value::Imm(i) => out.extend(dasm::tier::raw::amd64::push_i32(i as u32)),
+							Value::Stack => (),
+							Value::Void => panic!("Expected value, got void")
+						}
 
-						out.extend(dasm::tier::raw::amd64::add_r64_r64(dst, src));
-					}
+						out.extend(dasm::tier::raw::amd64::pop_r64(1)); // rcx = pop()
+						out.extend(dasm::tier::raw::amd64::pop_r64(0)); // rax = pop()
+						out.extend(dasm::tier::raw::amd64::add_r64_r64(0, 1)); // rax += rcx
+						out.extend(dasm::tier::raw::amd64::push_r64(0));
+
+						Value::Stack
+					},
 					
 					b"ret" => {
 						out.extend(dasm::tier::raw::amd64::ret());
+						Value::Void
 					}
 
 					whatever => todo!("Not sure what {} is", core::str::from_utf8(whatever).unwrap())
@@ -193,6 +230,11 @@ fn assemble<'a>(nodes: Vec<Node<'a>>) -> extern "C" fn() -> u64 {
 			
 			whatever => todo!("Whatever this is {whatever:#?}")
 		}
+	}
+
+	while ind < nodes.len() {
+		assemble_exp(&nodes[ind], &mut out);
+		ind += 1;
 	}
 
 	out.extend(dasm::tier::raw::amd64::ret());
@@ -209,14 +251,17 @@ fn assemble<'a>(nodes: Vec<Node<'a>>) -> extern "C" fn() -> u64 {
 
 fn main() {
 	let tokens = tokenize(b"
-		(set rax 11)
-		(set rbx 22)
-		(add rax rbx)
-		(ret)
+		(set rax
+			(add 1
+				(add 5
+					72
+				)
+			)
+		)
 	");
 
 	let nodes = parse(&tokens);
 	
-	let out = assemble(nodes);
-	println!("{}", out());
+	let out = assemble(&nodes);
+	assert_eq!(out(), 1 + 5 + 72);
 }

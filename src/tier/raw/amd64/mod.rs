@@ -1,5 +1,5 @@
-// AMD64 should support all? of these
-pub use crate::tier::raw::x86::*;
+// amd64 should support all of these.
+pub use crate::tier::raw::x86::compatible::*;
 
 pub const REX: u8 = 0b0100_0000;
 

@@ -2,7 +2,7 @@
 name = "dasm"
 authors = ["David Cruz <david@codebycruz.com>"]
 description = "A tiny, zero dependency assembler"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 keywords = ["assembler", "jit", "dasm", "x86", "codegen"]
 categories = ["os", "no-std", "no-std::no-alloc"]

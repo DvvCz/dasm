@@ -1,5 +1,5 @@
 [package]
-name = "tinyasm"
+name = "tinylisp"
 version = "0.1.0"
 authors = ["David Cruz <david@codebycruz.com>"]
 edition = "2021"
