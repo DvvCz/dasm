@@ -160,20 +160,13 @@ fn assemble<'a>(nodes: &'a [Node<'a>]) -> extern "C" fn() -> u64 {
 	}
 
 	fn get_value<'a>(v: Option<&Node<'a>>, out: &mut Vec<u8>) -> Value {
-		match v {
-			Some(Node::Ident(i)) => Value::Register(ident_to_register(*i)),
-			Some(Node::Number(n)) => Value::Imm(*n),
-			Some(node) => {
-				// expressions should pushed onto stack
-				assemble_exp(&node, out);
-				Value::Stack
-			},
-			None => panic!("Expected a value")
-		}
+		assemble_exp(v.expect("Expected a value"), out)
 	}
 
 	fn assemble_exp<'a>(node: &'a Node<'a>, out: &mut Vec<u8>) -> Value {
 		match node {
+			Node::Ident(i) => Value::Register(ident_to_register(*i)),
+			Node::Number(n) => Value::Imm(*n),
 			Node::Call(name, args) => {
 				match *name {
 					b"set" => {
@@ -227,13 +220,15 @@ fn assemble<'a>(nodes: &'a [Node<'a>]) -> extern "C" fn() -> u64 {
 					whatever => todo!("Not sure what {} is", core::str::from_utf8(whatever).unwrap())
 				}
 			},
-			
-			whatever => todo!("Whatever this is {whatever:#?}")
 		}
 	}
 
 	while ind < nodes.len() {
-		assemble_exp(&nodes[ind], &mut out);
+		match assemble_exp(&nodes[ind], &mut out) {
+			Value::Stack => out.extend(dasm::tier::raw::amd64::pop_r64(0)),
+			_ => ()
+		}
+
 		ind += 1;
 	}
 
@@ -258,10 +253,12 @@ fn main() {
 				)
 			)
 		)
+		
+		(add (add rax rax) 6)
 	");
 
 	let nodes = parse(&tokens);
 	
 	let out = assemble(&nodes);
-	assert_eq!(out(), 1 + 5 + 72);
+	assert_eq!(out(), (1 + 5 + 72) * 2 + 6);
 }

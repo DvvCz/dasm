@@ -1,4 +1,4 @@
-# tinyasm
+# tinylisp
 
 Example that implements a tiny lisp-like language which is compiled AOT.
 
