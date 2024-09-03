@@ -29,9 +29,9 @@ If you want a fully featured library, check out [Iced](https://github.com/icedla
 Code generation doesn't have to be hard. This just provides explicit functions for generating instructions.  
 No abstractions for the sake of safety or optimization which add complexity. If you just want to write assembly, this is for you.
 
-**There are three tiers to this library.**
+**This library is tiered by your desired abstraction level.**
 
-### Low
+### Raw
 
 This gives you access to the "raw" bytes from an instruction given untagged numeric arguments.
 Despite how it sounds, it is pretty nice and easy to use on its own.
@@ -60,15 +60,11 @@ assert_eq!(adder(5, 200), 205);
 
 There's also an example showcasing a tiny AOT compiled programming language at [`examples/tinyasm`](https://github.com/DvvCz/dasm/tree/master/examples/tinyasm).
 
-### Mid (not started)
+## Other Tiers
 
-This level intends to build on `raw` by combining overloads into simple instructions making use of tagged enums.
-For example, instead of calling `mov_r64_i64`, you call `mov` with a `Register` and an `Immediate` enum.
+At the moment, other tiers are not implemented as I plan out how these abstractions would go.
 
-### Top (not started)
-
-The final level intends to provide a very small set of instructions that will work across architectures.
-For example, an agnostic move function would emit `mov` in x86/amd64 and `li` in RISC-V.
+Hopefully they'd involve abstracting away overloads with tagged enums and cross architecture compatibility.
 
 ## Why?
 
