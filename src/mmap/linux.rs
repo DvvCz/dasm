@@ -57,7 +57,7 @@ impl<'a> Mmap<'a> {
 	}
 
 	pub fn exec(mem: impl AsRef<[u8]>) -> super::MmapResult<Self> {
-		Self::new(mem, 0x02 /* PROT_WRITE */ | 0x04 /* PROT_EXEC */)
+		Self::new(mem, 0x2 /* PROT_WRITE */ | 0x4 /* PROT_EXEC */ | 0x1 /* PROT_READ */)
 	}
 
 	pub fn as_ptr(&self) -> *const u8 {

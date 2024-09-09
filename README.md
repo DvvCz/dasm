@@ -40,12 +40,12 @@ Despite how it sounds, it is pretty nice to use on its own.
 
 ```rust
 let rax = 0;
-let rsp = 6; // Argument 2
-let rbp = 7; // Argument 1
+let rsi = 6; // Argument 2
+let rdi = 7; // Argument 1
 
 let asm = [
-	&dasm::tier::raw::amd64::mov_r64_r64(rax, rbp) as &[u8],
-	&dasm::tier::raw::amd64::add_r64_r64(rax, rsp),
+	&dasm::tier::raw::amd64::mov_r64_r64(rax, rdi) as &[u8],
+	&dasm::tier::raw::amd64::add_r64_r64(rax, rsi),
 	&dasm::tier::raw::amd64::ret()
 ].concat();
 

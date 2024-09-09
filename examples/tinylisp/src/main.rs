@@ -3,6 +3,7 @@ enum Token<'a> {
 	LParen,
 	RParen,
 	Ident(&'a [u8]),
+	String(std::borrow::Cow<'a, str>),
 	Number(u64)
 }
 
@@ -18,7 +19,7 @@ fn tokenize(s: &[u8]) -> Vec<Token> {
 					ptr += 1;
 				}
 			},
-			
+
 			b'a'..=b'z' | b'A'..=b'Z' => {
 				let start = ptr;
 
@@ -40,6 +41,37 @@ fn tokenize(s: &[u8]) -> Vec<Token> {
 
 				out.push(Token::Number(atoi::atoi(&s[start..ptr]).unwrap()));
 			},
+
+			b'"' => {
+				let start = ptr + 1;
+
+				ptr += 1;
+				loop {
+					assert!(ptr < s.len(), "String without closing quote");
+
+					if s[ptr] == b'"' {
+						ptr += 1;
+						break;
+					}
+
+					ptr += 1;
+				}
+				
+				let slice = &s[start..ptr - 1];
+				let str = core::str::from_utf8(slice)
+					.expect("Invalid utf8");
+
+				if str.contains("\\") {
+					let escaped = str
+						.replace("\\n", "\n")
+						.replace("\\t", "\t")
+						.replace("\\r", "\r");
+
+					out.push(Token::String(std::borrow::Cow::Owned(escaped)));
+				} else {
+					out.push(Token::String(std::borrow::Cow::Borrowed(str)));
+				}
+			}
 			
 			b' ' | b'\t' | b'\n' | b'\r' => {
 				ptr += 1;
@@ -54,10 +86,8 @@ fn tokenize(s: &[u8]) -> Vec<Token> {
 				ptr += 1;
 				out.push(Token::RParen);
 			}
-			
-			_ => {
-				panic!("??")
-			}
+
+			other => panic!("Unexpected: {}", other as char),
 		}
 	}
 
@@ -68,6 +98,7 @@ fn tokenize(s: &[u8]) -> Vec<Token> {
 enum Node<'a> {
 	Call(&'a [u8], Vec<Self>),
 	Ident(&'a [u8]),
+	String(std::borrow::Cow<'a, str>),
 	Number(u64)
 }
 
@@ -107,6 +138,11 @@ fn parse<'a>(toks: &'a [Token]) -> Vec<Node<'a>> {
 				*ind += 1;
 				return Node::Number(*n);
 			},
+			
+			Token::String(s) => {
+				*ind += 1;
+				return Node::String(s.to_owned());
+			}
 
 			whatever => panic!("Didn't expect {whatever:#?}")
 		}
@@ -134,13 +170,13 @@ fn assemble<'a>(nodes: &'a [Node<'a>]) -> extern "C" fn() -> u64 {
 			b"r3" => 3,
 			b"rbx" => 3,
 			b"r4" => 4,
-			b"rsi" => 4,
+			b"rsp" => 4,
 			b"r5" => 5,
-			b"rdi" => 5,
+			b"rbp" => 5,
 			b"r6" => 6,
-			b"rsp" => 6,
+			b"rsi" => 6,
 			b"r7" => 7,
-			b"rbp" => 7,
+			b"rdi" => 7,
 			whatever => panic!("Unknown register {}", core::str::from_utf8(whatever).unwrap())
 		}
 	}
@@ -155,6 +191,7 @@ fn assemble<'a>(nodes: &'a [Node<'a>]) -> extern "C" fn() -> u64 {
 	enum Value {
 		Register(u8),
 		Imm(u64),
+		SizedAddress(*const i8, usize),
 		Stack,
 		Void
 	}
@@ -167,6 +204,7 @@ fn assemble<'a>(nodes: &'a [Node<'a>]) -> extern "C" fn() -> u64 {
 		match node {
 			Node::Ident(i) => Value::Register(ident_to_register(*i)),
 			Node::Number(n) => Value::Imm(*n),
+			Node::String(s) => Value::SizedAddress(s.as_ptr() as _, s.len()),
 			Node::Call(name, args) => {
 				match *name {
 					b"set" => {
@@ -180,7 +218,8 @@ fn assemble<'a>(nodes: &'a [Node<'a>]) -> extern "C" fn() -> u64 {
 								out.extend(dasm::tier::raw::amd64::pop_r64(0));
 								out.extend(dasm::tier::raw::amd64::mov_r64_r64(register, 0));
 							},
-							Value::Void => panic!("Expected value, got void")
+							Value::Void => panic!("Expected value, got void"),
+							Value::SizedAddress(addr, ..) => out.extend(dasm::tier::raw::amd64::mov_r64_i64(register, addr as _))
 						}
 
 						Value::Void
@@ -194,14 +233,16 @@ fn assemble<'a>(nodes: &'a [Node<'a>]) -> extern "C" fn() -> u64 {
 							Value::Register(r) => out.extend(dasm::tier::raw::amd64::push_r64(r)),
 							Value::Imm(i) => out.extend(dasm::tier::raw::amd64::push_i32(i as u32)),
 							Value::Stack => (),
-							Value::Void => panic!("Expected value, got void")
+							Value::Void => panic!("Expected value, got void"),
+							Value::SizedAddress(..) => todo!("address")
 						};
 						
 						match rhs {
 							Value::Register(r) => out.extend(dasm::tier::raw::amd64::push_r64(r)),
 							Value::Imm(i) => out.extend(dasm::tier::raw::amd64::push_i32(i as u32)),
 							Value::Stack => (),
-							Value::Void => panic!("Expected value, got void")
+							Value::Void => panic!("Expected value, got void"),
+							Value::SizedAddress(..) => todo!("address")
 						}
 
 						out.extend(dasm::tier::raw::amd64::pop_r64(1)); // rcx = pop()
@@ -211,10 +252,48 @@ fn assemble<'a>(nodes: &'a [Node<'a>]) -> extern "C" fn() -> u64 {
 
 						Value::Stack
 					},
-					
+
+					b"syscall" => {
+						out.extend(dasm::tier::raw::amd64::syscall());
+						Value::Void
+					},
+
 					b"ret" => {
+						let val = get_value(args.get(0), out);
+
+						match val {
+							Value::Imm(i) => out.extend(dasm::tier::raw::amd64::mov_r64_i64(0, i)),
+							Value::Register(r) => out.extend(dasm::tier::raw::amd64::mov_r64_r64(0, r)),
+							Value::Stack => out.extend(dasm::tier::raw::amd64::pop_r64(0)),
+							Value::SizedAddress(addr, ..) => out.extend(dasm::tier::raw::amd64::mov_r64_i64(0, addr as _)),
+							Value::Void => ()
+						}
+
 						out.extend(dasm::tier::raw::amd64::ret());
 						Value::Void
+					},
+					
+					b"print" => {
+						let val = get_value(args.get(0), out);
+						match val {
+							Value::SizedAddress(addr, len) => {
+								out.extend(dasm::tier::raw::amd64::mov_r64_i64(6, addr as _));
+								out.extend(dasm::tier::raw::amd64::mov_r64_i64(2, len as _));
+								out.extend(dasm::tier::raw::amd64::mov_r64_i64(0, 1));
+								out.extend(dasm::tier::raw::amd64::mov_r64_i64(7, 1));
+								out.extend(dasm::tier::raw::amd64::syscall());
+								
+								// Print the newline
+								out.extend(dasm::tier::raw::amd64::mov_r64_i64(6, b"\n".as_ptr() as _));
+								out.extend(dasm::tier::raw::amd64::mov_r64_i64(2, 1));
+								out.extend(dasm::tier::raw::amd64::mov_r64_i64(0, 1));
+								out.extend(dasm::tier::raw::amd64::mov_r64_i64(7, 1));
+								out.extend(dasm::tier::raw::amd64::syscall());
+
+								Value::Void
+							},
+							_ => todo!("everything else")
+						}
 					}
 
 					whatever => todo!("Not sure what {} is", core::str::from_utf8(whatever).unwrap())
@@ -245,20 +324,24 @@ fn assemble<'a>(nodes: &'a [Node<'a>]) -> extern "C" fn() -> u64 {
 }
 
 fn main() {
-	let tokens = tokenize(b"
-		(set rax
-			(add 1
-				(add 5
-					72
-				)
-			)
-		)
-		
-		(add (add rax rax) 6)
-	");
+	let tokens = tokenize(br#"
+		; Print out a string manually
+		(set rsi "Hello, world!\n") ; address
+		(set rdx 14) ; length
+		(set rdi 1) ; fd (stdout)
+		(set rax 1) ; sys_write
+		(syscall)
+
+		; Identical behavior to this
+		(print "Hello, world!")
+
+		; Not actually needed since a return is automatically inserted for you
+		; Nest however many you want. Uses the stack.
+		(ret (add 2 (add 2 4)))
+	"#);
 
 	let nodes = parse(&tokens);
-	
+
 	let out = assemble(&nodes);
-	assert_eq!(out(), (1 + 5 + 72) * 2 + 6);
+	assert_eq!(out(), 2 + 2 + 4);
 }
