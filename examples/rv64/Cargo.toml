@@ -1,5 +1,5 @@
 [package]
-name = "rv32"
+name = "rv64"
 version = "0.1.0"
 authors = ["David Cruz <david@codebycruz.com>"]
 edition = "2021"

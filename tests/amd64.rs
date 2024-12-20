@@ -9,16 +9,18 @@ const RDI: u8 = 7; // Arg #1
 #[test]
 #[cfg(target_os = "linux")]
 fn test_print() {
+	use dasm::tier::raw::amd64::*;
+
 	let message = b"Hello, world!\n";
 
 	let map = dasm::mmap::Mmap::exec(&[
-		&dasm::tier::raw::amd64::mov_r64_i64(RDI, 1) as &[u8],
-		&dasm::tier::raw::amd64::mov_r64_i64(RAX, 1),
-		&dasm::tier::raw::amd64::mov_r64_i64(RSI, message.as_ptr() as _),
-		&dasm::tier::raw::amd64::mov_r64_i64(RDX, message.len() as _),
-		&dasm::tier::raw::amd64::syscall(),
+		&mov_r64_i64(RDI, 1) as &[u8],
+		&mov_r64_i64(RAX, 1),
+		&mov_r64_i64(RSI, message.as_ptr() as _),
+		&mov_r64_i64(RDX, message.len() as _),
+		&syscall(),
 
-		&dasm::tier::raw::amd64::ret()
+		&ret()
 	].concat()).expect("Failed to mmap");
 
 	let f: extern "C" fn() = unsafe { std::mem::transmute(map.as_ptr()) };
@@ -28,12 +30,14 @@ fn test_print() {
 }
 
 #[test]
-fn test_adder() {
+fn test_raw_adder() {
+	use dasm::tier::raw::amd64::*;
+
 	let adder = dasm::mmap::Mmap::exec([
-		&dasm::tier::raw::amd64::mov_r64_r64(RAX, RDI) as &[u8],
-		&dasm::tier::raw::amd64::mov_r64_r64(RCX, RSI),
-		&dasm::tier::raw::amd64::add_r64_r64(RAX, RCX),
-		&dasm::tier::raw::amd64::ret()
+		&mov_r64_r64(RAX, RDI) as &[u8],
+		&mov_r64_r64(RCX, RSI),
+		&add_r64_r64(RAX, RCX),
+		&ret()
 	].concat()).unwrap();
 
 	let adder: extern "C" fn(u64, u64) -> u64 = unsafe { std::mem::transmute(adder.as_ptr()) };

@@ -1,3 +1,8 @@
+//! `amd64` implementation
+//!
+//! For 64 bit x86. This includes all compatible instructions from x86 (alongside 64 bit equivalents.)
+
+
 // amd64 should support all of these.
 pub use crate::tier::raw::x86::compatible::*;
 

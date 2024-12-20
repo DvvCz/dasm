@@ -1,3 +1,7 @@
+//! `x86` implementation
+//!
+//! For 32 bit x86. You should probably be using amd64.
+
 pub(crate) mod prelude {
 	pub(crate) const MODRM_DIRECT: u8 = 0b11;
 
